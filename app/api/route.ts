@@ -17,7 +17,7 @@ export const GET = async () => {
   try {
     const result = await databases.listDocuments(
       process.env.APPWRITE_DATABASE_ID!,
-      process.env.APPWRITE_COLLECTION_ID!
+      process.env.APPWRITE_TASK_COLLECTION_ID!
     );
 
     return NextResponse.json({ result });

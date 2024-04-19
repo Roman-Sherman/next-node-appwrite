@@ -1,11 +1,27 @@
 "use client";
 
-import { createTask } from "@/lib";
+import { signUpWithEmail } from "@/lib";
+import { createEmailSession, getAccount } from "@/lib/fetch";
+import { useEffect } from "react";
 
 const Create = () => {
+  useEffect(() => {
+    getAccount()
+      .then((response) => console.log(response))
+      .catch((error) => console.error(error));
+  }, []);
+
   const handleSubmit = async () => {
     try {
-      await createTask("Learn Next.js", "Goal");
+      const user = {
+        email: "johndoe10@gmail.com",
+        password: "1234567890",
+        name: "John Doe 12",
+      };
+
+      await signUpWithEmail(user.email, user.password, user.name);
+
+      await createEmailSession(user.email, user.password);
     } catch (error) {
       console.error("Error", error);
     }
