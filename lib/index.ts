@@ -1,7 +1,7 @@
 "use server";
 
 import { cookies } from "next/headers";
-import { Client, Account, ID } from "node-appwrite";
+import { Client, Account, ID, Databases } from "node-appwrite";
 
 export async function createEmailSession(email: string, password: string) {
   try {
@@ -18,12 +18,13 @@ export async function createEmailSession(email: string, password: string) {
       }
     );
 
-    const responseCookie = response.headers.get("set-cookie");
+    const responseCookie = response.headers.get("Set-Cookie");
+
     cookies().set("appwrite-cookie", responseCookie!);
 
-    const result = await response.json();
+    await response.json();
 
-    return result;
+    return responseCookie;
   } catch (error) {
     console.error("Error", error);
   }
@@ -45,7 +46,6 @@ export async function getAccount() {
     });
 
     const result = await response.json();
-    console.log({ account: result });
 
     return JSON.parse(JSON.stringify(result));
   } catch (error) {
@@ -58,14 +58,6 @@ export async function createSessionClient() {
     .setEndpoint(process.env.APPWRITE_ENDPOINT!)
     .setProject(process.env.APPWRITE_PROJECT!);
 
-  const session = cookies().get("appwrite-cookie");
-
-  if (!session || !session.value) {
-    throw new Error("No session");
-  }
-
-  client.setJWT(session.value);
-
   return {
     get account() {
       return new Account(client);
@@ -77,11 +69,14 @@ export async function createAdminClient() {
   const client = new Client()
     .setEndpoint(process.env.APPWRITE_ENDPOINT!)
     .setProject(process.env.APPWRITE_PROJECT!)
-    .setKey(process.env.NEXT_APPWRITE_KEY!);
+    .setKey(process.env.APPWRITE_KEY!);
 
   return {
     get account() {
       return new Account(client);
+    },
+    get database() {
+      return new Databases(client);
     },
   };
 }
@@ -89,7 +84,9 @@ export async function createAdminClient() {
 export async function getLoggedInUser() {
   try {
     const { account } = await createSessionClient();
-    return await account.get();
+    const result = await account.get();
+
+    return JSON.parse(JSON.stringify(result));
   } catch (error) {
     return null;
   }
@@ -101,13 +98,28 @@ export async function signUpWithEmail(
   name: string
 ) {
   try {
-    const { account } = await createAdminClient();
+    const { account } = await createSessionClient();
 
     const newAccount = await account.create(ID.unique(), email, password, name);
-    await createEmailSession(email, password);
+    const cookie = await createEmailSession(email, password);
+
+    const { database } = await createAdminClient();
+
+    const savedUser = await database.createDocument(
+      process.env.APPWRITE_DATABASE!,
+      process.env.APPWRITE_USER_COLLECTION!,
+      ID.unique(),
+      {
+        accountId: newAccount.$id,
+        email: newAccount.email,
+        name: newAccount.name,
+        accessToken: cookie,
+      }
+    );
 
     return JSON.parse(JSON.stringify(newAccount));
   } catch (error) {
+    console.error("Error", error);
     return null;
   }
 }
