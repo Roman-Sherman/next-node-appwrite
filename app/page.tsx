@@ -1,10 +1,11 @@
-import { getLoggedInUser, signUpWithEmail } from "@/lib";
-import { createEmailSession } from "@/lib/fetch";
-import Create from "./create";
+import { getAccount, getLoggedInUser, signUpWithEmail } from "@/lib";
 
 export default async function SignUpPage() {
   const user = await getLoggedInUser();
   console.log({ user });
+
+  const userAccount = await getAccount();
+  console.log({ userAccount });
 
   async function signUp(formData: any) {
     "use server";
@@ -14,8 +15,6 @@ export default async function SignUpPage() {
     const name = formData.get("name");
 
     await signUpWithEmail(email, password, name);
-
-    await createEmailSession(email, password);
   }
 
   return (
@@ -33,7 +32,7 @@ export default async function SignUpPage() {
         <button type="submit">Sign up</button>
       </form>
 
-      <Create />
+      {/* <Create /> */}
     </>
   );
 }
